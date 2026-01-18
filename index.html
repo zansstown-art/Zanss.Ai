@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zanss AI - Developer Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --surface: #171717;
+            --surface-light: #212121;
+            --accent: #ffffff;
+            --text-main: #ececec;
+            --text-mute: #b4b4b4;
+            --border: rgba(255, 255, 255, 0.1);
+            --gradient-text: linear-gradient(90deg, #ffffff, #888888);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+        
+        /* SPLASH SCREEN */
+        #splash-screen {
+            position: fixed; inset: 0; background: var(--bg); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 0.8s ease;
+        }
+        .splash-logo { font-size: 40px; margin-bottom: 20px; color: var(--accent); animation: splashPulse 2s infinite ease-in-out; }
+        .splash-text { font-size: 14px; letter-spacing: 4px; color: var(--text-mute); text-transform: uppercase; }
+        @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
+
+        /* MODERN MODAL LIMIT */
+        #limit-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px); display: none; align-items: center;
+            justify-content: center; z-index: 10000; padding: 20px;
+        }
+        .modal-content {
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 24px; border-radius: 24px; text-align: center;
+            max-width: 320px; width: 100%; transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        #limit-modal.active { display: flex; }
+        #limit-modal.active .modal-content { transform: scale(1); }
+        .modal-icon { font-size: 40px; color: var(--accent); margin-bottom: 16px; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .modal-desc { font-size: 14px; color: var(--text-mute); line-height: 1.5; margin-bottom: 20px; }
+        .modal-btn {
+            background: var(--accent); color: #000; border: none;
+            padding: 12px 24px; border-radius: 14px; font-weight: 700;
+            width: 100%; cursor: pointer; transition: opacity 0.2s;
+        }
+
+        .app-container { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 800px; margin: 0 auto; position: relative; }
+        header { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .btn-circle { width: 40px; height: 40px; border-radius: 50%; background: transparent; border: none; color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+
+        .welcome-screen {
+            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; width: 90%; transition: opacity 0.5s ease; z-index: 1;
+        }
+        .welcome-screen h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+        .welcome-screen p { color: var(--text-mute); font-size: 13px; letter-spacing: 1px; }
+
+        .chat-view { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; z-index: 2; }
+        .chat-view::-webkit-scrollbar { width: 0; }
+        
+        .msg-container { width: 100%; display: flex; flex-direction: column; margin-bottom: 10px; }
+        .user-msg { align-self: flex-end; background: var(--surface-light); padding: 12px 16px; border-radius: 18px; max-width: 85%; }
+        .ai-msg { align-self: flex-start; width: 100%; font-size: 16px; line-height: 1.6; }
+        
+        pre { background: #000 !important; padding: 15px; border-radius: 12px; overflow-x: auto; margin: 10px 0; border: 1px solid var(--border); position: relative; }
+        code { font-family: 'Courier New', monospace; font-size: 14px; color: #fff; }
+        .copy-code-btn { position: absolute; top: 8px; right: 8px; background: var(--surface-light); color: #fff; border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+        .searching-status { color: var(--text-mute); font-size: 14px; display: flex; align-items: center; gap: 8px; padding: 10px 0; }
+        .pulse-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        .copy-btn { font-size: 12px; color: var(--text-mute); cursor: pointer; margin-top: 5px; width: fit-content; }
+
+        .input-dock { padding: 12px 16px 20px 16px; background: var(--bg); }
+        .input-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 6px 8px 6px 16px; display: flex; align-items: center; gap: 10px; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; outline: none; }
+        .btn-send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #000; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+
+        /* DRAWER & SIDEBAR */
+        .drawer { position: fixed; top: 0; left: -100%; width: 280px; height: 100%; background: var(--surface); z-index: 100; transition: left 0.3s ease; padding: 25px 20px; display: flex; flex-direction: column; }
+        .drawer.open { left: 0; }
+        .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 99; backdrop-filter: blur(4px); }
+        .drawer-overlay.active { display: block; }
+        
+        .brand-zanss {
+            font-size: 11px; font-weight: 700; letter-spacing: 2px;
+            background: var(--gradient-text); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; margin-bottom: 25px;
+            text-transform: uppercase; opacity: 0.9;
+        }
+
+        .new-chat-btn {
+            background: var(--surface-light); color: var(--text-main);
+            border: 1px solid var(--border); padding: 12px; border-radius: 20px;
+            width: 100%; margin-bottom: 20px; cursor: pointer;
+            display: flex; align-items: center; gap: 10px; font-size: 14px;
+        }
+
+        .lib-item { 
+            background: transparent; padding: 12px 8px; border-radius: 8px; 
+            margin-bottom: 5px; font-size: 14px; cursor: pointer; 
+            color: var(--text-main); white-space: nowrap; overflow: hidden; 
+            text-overflow: ellipsis; display: flex; align-items: center;
+        }
+        .lib-item.active { background: var(--surface-light); font-weight: 600; color: #fff; }
+        .lib-item i { margin-right: 12px; font-size: 13px; color: var(--text-mute); }
+        .lib-label { font-size: 12px; color: var(--text-mute); margin-bottom: 10px; margin-top: 10px; padding-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="splash-logo"><i class="fas fa-microchip"></i></div>
+        <div class="splash-text">Power By Zanss</div>
+    </div>
+
+    <div id="limit-modal">
+        <div class="modal-content">
+            <div class="modal-icon"><i class="fas fa-history"></i></div>
+            <div class="modal-title">Limit Tercapai</div>
+            <div class="modal-desc">Batas 10 percakapan telah terpenuhi. Seluruh riwayat lama telah dibersihkan demi performa.</div>
+            <button class="modal-btn" onclick="closeLimitModal()">SAYA PAHAM</button>
+        </div>
+    </div>
+
+    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="brand-zanss">DEVELOPER BY ZANSS</div>
+        <button class="new-chat-btn" onclick="initNewChat()">
+            <i class="fas fa-plus"></i> Percakapan Baru
+        </button>
+        <div class="lib-label">Library (Limit 10)</div>
+        <div id="lib-container"></div>
+    </div>
+
+    <div class="app-container">
+        <header>
+            <button class="btn-circle" onclick="toggleDrawer()"><i class="fas fa-bars"></i></button>
+            <button class="btn-circle"><i class="far fa-user-circle"></i></button>
+        </header>
+
+        <div class="welcome-screen" id="welcome-screen">
+            <h1>Welcome di AI buatan Zanss</h1>
+            <p>POWERED BY ZANSS</p>
+        </div>
+
+        <main class="chat-view" id="chat-box"></main>
+
+        <div class="input-dock">
+            <div class="input-bar">
+                <input type="text" id="user-input" placeholder="Tanya sesuatu..." autocomplete="off">
+                <button class="btn-send" onclick="sendQuery()"><i class="fas fa-arrow-up"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GROQ_API_KEY = "GANTI_DENGAN_API_KEY_ANDA";
+        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+        let allChats = [];
+        let currentChatId = null;
+
+        window.onload = () => {
+            loadChatsFromStorage();
+            setTimeout(() => {
+                const ss = document.getElementById('splash-screen');
+                ss.style.opacity = '0';
+                setTimeout(() => ss.style.display = 'none', 800);
+            }, 2000);
+        };
+
+        function toggleDrawer() {
+            document.getElementById('drawer').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function closeLimitModal() {
+            document.getElementById('limit-modal').classList.remove('active');
+        }
+
+        function loadChatsFromStorage() {
+            const stored = localStorage.getItem('zanss_chats_v2');
+            if (stored) {
+                allChats = JSON.parse(stored);
+                renderLibrary();
+            }
+        }
+
+        function saveChatsToStorage() {
+            if (allChats.length > 10) {
+                allChats = []; 
+                currentChatId = null;
+                document.getElementById('limit-modal').classList.add('active'); // MODAL MODERN
+            }
+            localStorage.setItem('zanss_chats_v2', JSON.stringify(allChats));
+            renderLibrary();
+        }
+
+        function renderLibrary() {
+            const container = document.getElementById('lib-container');
+            container.innerHTML = allChats.map(chat => `
+                <div class="lib-item ${currentChatId === chat.id ? 'active' : ''}" onclick="loadChatSession(${chat.id})">
+                    <i class="far fa-comment-alt"></i> ${chat.title}
+                </div>
+            `).join('');
+        }
+
+        function loadChatSession(id) {
+            const chat = allChats.find(c => c.id === id);
+            if (!chat) return;
+            currentChatId = id;
+            document.getElementById('welcome-screen').style.display = 'none';
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = ''; 
+            chat.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    chatBox.insertAdjacentHTML('beforeend', `<div class="msg-container"><div class="user-msg">${msg.content}</div></div>`);
+                } else {
+                    renderAIResponse(msg.content, chatBox);
+                }
+            });
+            toggleDrawer();
+            chatBox.scrollTop = chatBox.scrollHeight;
+            renderLibrary();
+        }
+
+        function initNewChat() {
+            currentChatId = null;
+            document.getElementById('chat-box').innerHTML = '';
+            document.getElementById('welcome-screen').style.display = 'block';
+            toggleDrawer();
+            renderLibrary();
+        }
+
+        async function sendQuery() {
+            const input = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            const text = input.value.trim();
+            if (!text) return;
+
+            document.getElementById('welcome-screen').style.display = 'none';
+            chatBox.insertAdjacentHTML('beforeend', `<div class="msg-container"><div class="user-msg">${text}</div></div>`);
+            input.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            if (!currentChatId) {
+                const newId = Date.now();
+                allChats.unshift({ id: newId, title: text, messages: [{ role: 'user', content: text }] });
+                currentChatId = newId;
+            } else {
+                const chatIndex = allChats.findIndex(c => c.id === currentChatId);
+                if (chatIndex > -1) {
+                    allChats[chatIndex].messages.push({ role: 'user', content: text });
+                    const updatedChat = allChats.splice(chatIndex, 1)[0];
+                    allChats.unshift(updatedChat);
+                }
+            }
+            saveChatsToStorage();
+
+            const searchId = 'search-' + Date.now();
+            chatBox.insertAdjacentHTML('beforeend', `<div class="searching-status" id="${searchId}"><div class="pulse-dot"></div>Menelusuri...</div>`);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const currentSession = allChats.find(c => c.id === currentChatId);
+                if(!currentSession) return;
+
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        model: "llama-3.3-70b-versatile", 
+                        messages: [{ role: "system", content: "Kamu Zanss AI. Jawab Bahasa Indonesia. Kode markdown ```." }, ...currentSession.messages] 
+                    })
+                });
+                const data = await response.json();
+                const statusEl = document.getElementById(searchId);
+                if(statusEl) statusEl.remove();
+                
+                const aiResp = data.choices[0].message.content;
+                renderAIResponse(aiResp, chatBox);
+                
+                const activeChat = allChats.find(c => c.id === currentChatId);
+                if (activeChat) { 
+                    activeChat.messages.push({ role: 'assistant', content: aiResp }); 
+                    saveChatsToStorage(); 
+                }
+            } catch (err) { 
+                const statusEl = document.getElementById(searchId);
+                if(statusEl) statusEl.innerText = "Error API."; 
+            }
+        }
+
+        function renderAIResponse(text, container) {
+            const htmlContent = marked.parse(text);
+            container.insertAdjacentHTML('beforeend', `
+                <div class="msg-container">
+                    <div class="ai-msg">${htmlContent}</div>
+                    <div class="copy-btn" onclick="copyText(this)"><i class="far fa-copy"></i> Salin Jawaban</div>
+                    <div style="display:none" class="raw-text">${text}</div> 
+                </div>`);
+            addCodeCopyButtons();
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addCodeCopyButtons() {
+            document.querySelectorAll('pre').forEach(block => {
+                if (!block.querySelector('.copy-code-btn')) {
+                    const btn = document.createElement('button');
+                    btn.innerText = 'Copy Code'; btn.className = 'copy-code-btn';
+                    btn.onclick = () => { 
+                        navigator.clipboard.writeText(block.querySelector('code').innerText);
+                        btn.innerText = 'Copied!'; setTimeout(() => btn.innerText = 'Copy Code', 2000);
+                    };
+                    block.appendChild(btn);
+                }
+            });
+        }
+
+        function copyText(btn) {
+            navigator.clipboard.writeText(btn.nextElementSibling.innerText);
+            btn.innerHTML = '<i class="fas fa-check"></i> Tersalin';
+            setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i> Salin Jawaban', 2000);
+        }
+
+        document.getElementById('user-input').addEventListener('keypress', e => { if (e.key === 'Enter') sendQuery(); });
+    </script>
+</body>
+</html>
